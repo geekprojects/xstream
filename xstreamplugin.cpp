@@ -17,13 +17,12 @@ int XStreamPlugin::start(char* outName, char* outSig, char* outDesc)
 {
     setLogPrinter(&m_logPrinter);
 
-    fprintf(stderr, "UFC: XScreenPlugin: Here!\n");
     strcpy(outName, "XStream Display Streamer");
     strcpy(outSig, "com.geekprojects.xstream");
-    strcpy(outDesc, "XStream Screen Streamer");
+    strcpy(outDesc, "XStream Display Streamer");
 
-    m_menuContainer = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XScreen", nullptr, 0);
-    m_menuId = XPLMCreateMenu("XScreen", XPLMFindPluginsMenu(), m_menuContainer, menuCallback, this);
+    m_menuContainer = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XStream", nullptr, 0);
+    m_menuId = XPLMCreateMenu("XStream", XPLMFindPluginsMenu(), m_menuContainer, menuCallback, this);
 
     XPLMAppendMenuItem(m_menuId, "Start Streaming", (void*)3, 1);
     XPLMAppendMenuItem(m_menuId, "Dump Textures", (void*)2, 1);
@@ -36,6 +35,8 @@ int XStreamPlugin::start(char* outName, char* outSig, char* outDesc)
 
 void XStreamPlugin::stop()
 {
+    m_videoStream->stop();
+    m_displayManager->stop();
 }
 
 
@@ -46,15 +47,25 @@ int XStreamPlugin::enable()
 
 void XStreamPlugin::disable()
 {
+    m_videoStream->stop();
+    m_displayManager->stop();
 }
 
 void XStreamPlugin::startStream()
 {
-    if (m_displayManager->findDisplays())
+    bool res;
+    res = m_displayManager->findDisplays();
+    if (!res)
     {
-        m_displayManager->start();
-        m_videoStream->start();
+        return;
     }
+
+    res = m_displayManager->start();
+    if (!res)
+    {
+        return;
+    }
+    m_videoStream->start();
 }
 
 void XStreamPlugin::receiveMessage(XPLMPluginID inFrom, int inMsg, void* inParam)

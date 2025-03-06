@@ -26,6 +26,12 @@ bool VideoStream::start()
 
 bool VideoStream::stop()
 {
+    if (m_loop != nullptr)
+    {
+        log(DEBUG, "stop: Stopping...");
+        m_streaming = false;
+        g_main_loop_quit(m_loop);
+    }
     return true;
 }
 
@@ -162,13 +168,29 @@ void VideoStream::streamMain()
     {
         log(DEBUG, "streamMain: Creating factory for: /%s", display->name.c_str());
         auto factory = gst_rtsp_media_factory_new();
-        gst_rtsp_media_factory_set_launch(
-            factory,
-            //"( appsrc name=mysrc is-live=1 ! videoconvert ! video/x-raw,format=I420  ! x264enc ! rtph264pay name=pay0 pt=96 )");
-            //"( appsrc name=mysrc is-live=1 ! videoconvert ! video/x-raw,format=I420  ! x264enc ! rtph264pay name=pay0 pt=96 )");
-    //"( appsrc name=mysrc block=false is-live=1 do-timestamp=1 min-latency=0 ! videoconvert ! video/x-raw,format=I420 ! x264enc speed-preset=superfast tune=zerolatency ! rtph264pay name=pay0 pt=96 )");
-    "( appsrc name=mysrc block=false is-live=1 do-timestamp=1 min-latency=0 ! videoconvert ! video/x-raw,format=I420 ! vtenc_h264_hw realtime=true  ! rtph264pay name=pay0 pt=96 )");
-            //"(appsrc name=mysrc ! videoconvert ! video/x-raw,format=I420  ! x264enc ! rtph264pay)");
+
+        string launch = "(";
+
+        // Our "appsrc" where we provide the data
+        launch += "appsrc name=mysrc block=true is-live=1 do-timestamp=1 min-latency=0 ! ";
+
+        // Convert it in to YUV
+        launch += "videoconvert ! video/x-raw,format=I420 ! ";
+
+        // Encode it as H264
+#ifdef __APPLE__
+        // Use Apple Media, using hardware acceleration where available
+        launch += "vtenc_h264 quality=0.25 realtime=true ! ";
+#else
+        // Standard H264 encoder
+        launch += "x264enc ! ";
+#endif
+
+        // Make it streamable
+        launch += "rtph264pay name=pay0 pt=96 ";
+        launch += ")";
+
+        gst_rtsp_media_factory_set_launch(factory, launch.c_str());
 
         auto displayContext = g_new0(DisplayContext, 1);
         displayContext->display = display;
@@ -188,4 +210,6 @@ void VideoStream::streamMain()
     log(DEBUG, "streamMain: Starting loop...");
     g_main_loop_run(m_loop);
     log(DEBUG, "streamMain: Done!");
+
+    m_loop = nullptr;
 }

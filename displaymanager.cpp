@@ -55,8 +55,12 @@ bool DisplayManager::start()
 
 bool DisplayManager::stop()
 {
-    m_running = false;
-    XPLMUnregisterDrawCallback(updateCallback, xplm_Phase_Panel, 0, this);
+    if (m_running)
+    {
+        log(DEBUG, "stop: Stopping...");
+        m_running = false;
+        XPLMUnregisterDrawCallback(updateCallback, xplm_Phase_Panel, 0, this);
+    }
     return true;
 }
 
@@ -87,7 +91,7 @@ bool DisplayManager::findDisplays()
             auto display = new Display();
             //display->plugin = this;
             display->x = 0;
-            display->y = 0;
+            display->y = 512;
             display->width = 512;
             display->height = 512;
             display->buffer = new uint8_t[display->width * display->height * 4];
@@ -103,12 +107,28 @@ bool DisplayManager::findDisplays()
             auto display = new Display();
             //display->plugin = this;
             display->x = 512;
-            display->y = 0;
+            display->y = 512;
             display->width = 512;
             display->height = 512;
             display->buffer = new uint8_t[display->width * display->height * 4];
             memset(display->buffer, 0, display->width * display->height * 4);
             display->name = "nd";
+            display->texture = texture;
+            texture->displays.push_back(display);
+            m_displays.push_back(display);
+        }
+
+        // ECAM
+        {
+            auto display = new Display();
+            //display->plugin = this;
+            display->x = 1024;
+            display->y = 512;
+            display->width = 512;
+            display->height = 512;
+            display->buffer = new uint8_t[display->width * display->height * 4];
+            memset(display->buffer, 0, display->width * display->height * 4);
+            display->name = "ecam";
             display->texture = texture;
             texture->displays.push_back(display);
             m_displays.push_back(display);
