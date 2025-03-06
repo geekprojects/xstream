@@ -13,12 +13,11 @@
 
 #include <ufc/logger.h>
 
-class XScreenPlugin;
+class XStreamPlugin;
 struct Texture;
 
 struct Display
 {
-    //XScreenPlugin* plugin;
     GstElement* appSrc;
     Texture* texture;
 
@@ -34,8 +33,6 @@ struct Display
 
 struct Texture
 {
-    //XScreenPlugin* plugin;
-
     int textureNum;
     int textureWidth;
     int textureHeight;
@@ -44,7 +41,7 @@ struct Texture
     std::vector<Display*> displays;
 };
 
-class DisplayManager : UFC::Logger
+class DisplayManager : private UFC::Logger
 {
     bool m_running = false;
     std::vector<Texture*> m_textures;
@@ -55,6 +52,7 @@ class DisplayManager : UFC::Logger
 
     static int updateCallback(XPLMDrawingPhase inPhase, [[maybe_unused]] int inIsBefore, void *inRefcon);
 
+    Texture* checkTexture(int textureNum);
     void dumpTexture(int i, const char * name);
 
     void update();

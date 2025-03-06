@@ -4,40 +4,25 @@
 
 #include <XPLMProcessing.h>
 #include <XPLMMenus.h>
-#include <XPLMPlugin.h>
-#include <XPLMDisplay.h>
 
 #include "videostream.h"
 #include "displaymanager.h"
 
-#ifdef __APPLE__
-#define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED 1
-#include <OpenGL/OpenGLAvailability.h>
-#include <OpenGL/gl.h>
-#include <OpenGL/gl3.h>
-#else
-
-#define GL_GLEXT_PROTOTYPES 1
-#define GL3_PROTOTYPES 1
-
-#include <GL/gl.h>
-#endif
-
 using namespace std;
 using namespace UFC;
 
-XScreenPlugin g_ufcPlugin;
+XStreamPlugin g_ufcPlugin;
 
-int XScreenPlugin::start(char* outName, char* outSig, char* outDesc)
+int XStreamPlugin::start(char* outName, char* outSig, char* outDesc)
 {
     setLogPrinter(&m_logPrinter);
 
-    fprintf(stderr, "UFC: XPluginStart: Here!\n");
-    strcpy(outName, "X Screen Streamer");
-    strcpy(outSig, "com.geekprojects.xscreen.plugin");
-    strcpy(outDesc, "X Screen Streamer");
+    fprintf(stderr, "UFC: XScreenPlugin: Here!\n");
+    strcpy(outName, "XStream Display Streamer");
+    strcpy(outSig, "com.geekprojects.xstream");
+    strcpy(outDesc, "XStream Screen Streamer");
 
-    m_menuContainer = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XScreen", 0, 0);
+    m_menuContainer = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XScreen", nullptr, 0);
     m_menuId = XPLMCreateMenu("XScreen", XPLMFindPluginsMenu(), m_menuContainer, menuCallback, this);
 
     XPLMAppendMenuItem(m_menuId, "Start Streaming", (void*)3, 1);
@@ -49,21 +34,21 @@ int XScreenPlugin::start(char* outName, char* outSig, char* outDesc)
     return 1;
 }
 
-void XScreenPlugin::stop()
+void XStreamPlugin::stop()
 {
 }
 
 
-int XScreenPlugin::enable()
+int XStreamPlugin::enable()
 {
     return 1;
 }
 
-void XScreenPlugin::disable()
+void XStreamPlugin::disable()
 {
 }
 
-void XScreenPlugin::startStream()
+void XStreamPlugin::startStream()
 {
     if (m_displayManager->findDisplays())
     {
@@ -72,7 +57,7 @@ void XScreenPlugin::startStream()
     }
 }
 
-void XScreenPlugin::receiveMessage(XPLMPluginID inFrom, int inMsg, void* inParam)
+void XStreamPlugin::receiveMessage(XPLMPluginID inFrom, int inMsg, void* inParam)
 {
 #if 0
     switch (inMsg)
@@ -89,16 +74,16 @@ void XScreenPlugin::receiveMessage(XPLMPluginID inFrom, int inMsg, void* inParam
 #endif
 }
 
-void XScreenPlugin::menuCallback(void* menuRef, void* itemRef)
+void XStreamPlugin::menuCallback(void* menuRef, void* itemRef)
 {
     if (menuRef != nullptr)
     {
-        ((XScreenPlugin*)menuRef)->menu(itemRef);
+        ((XStreamPlugin*)menuRef)->menu(itemRef);
     }
 }
 
 
-void XScreenPlugin::menu(void* itemRef)
+void XStreamPlugin::menu(void* itemRef)
 {
     log(DEBUG, "menu: itemRef=%p", itemRef);
     auto item = static_cast<int>(reinterpret_cast<intptr_t>(itemRef));

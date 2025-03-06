@@ -42,7 +42,7 @@ class XPLogPrinter : public UFC::LogPrinter
 };
 
 
-class XScreenPlugin : public UFC::Logger
+class XStreamPlugin : private UFC::Logger
 {
  private:
     XPLogPrinter m_logPrinter;
@@ -58,7 +58,7 @@ class XScreenPlugin : public UFC::Logger
     void menu(void* itemRef);
 
 public:
-    XScreenPlugin() : Logger("XScreenPlugin") {}
+    XStreamPlugin() : Logger("XScreenPlugin") {}
 
     int start(char* outName, char* outSig, char* outDesc);
     void stop();

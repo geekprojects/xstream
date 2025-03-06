@@ -5,7 +5,6 @@
 #ifndef VIDEOSTREAM_H
 #define VIDEOSTREAM_H
 
-#include <memory>
 #include <thread>
 
 #include <gst/gst.h>
@@ -14,7 +13,7 @@
 #include <ufc/logger.h>
 
 struct Display;
-class XScreenPlugin;
+class XStreamPlugin;
 class VideoStream;
 
 struct DisplayContext
@@ -23,15 +22,14 @@ struct DisplayContext
     VideoStream* videoStream;
 };
 
-class VideoStream : UFC::Logger
+class VideoStream : private UFC::Logger
 {
  private:
-    XScreenPlugin* m_xscreenPlugin;
+    XStreamPlugin* m_xscreenPlugin;
 
     std::shared_ptr<std::thread> m_streamMainThread;
     GMainLoop* m_loop = nullptr;
     GstRTSPServer* m_server = nullptr;
-    //GstClockTime m_timestamp = 0;
     bool m_streaming = false;
     bool m_pushData = false;
 
@@ -46,10 +44,9 @@ class VideoStream : UFC::Logger
     void streamMain();
 
  public:
-    explicit VideoStream(XScreenPlugin* plugin) : Logger("VideoStream"), m_xscreenPlugin(plugin) {}
-    ~VideoStream() = default;
+    explicit VideoStream(XStreamPlugin* plugin) : Logger("VideoStream"), m_xscreenPlugin(plugin) {}
+    ~VideoStream() override = default;
 
-    bool init();
     bool start();
     bool stop();
 };

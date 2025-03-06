@@ -9,12 +9,6 @@
 using namespace std;
 using namespace UFC;
 
-
-bool VideoStream::init()
-{
-    return true;
-}
-
 bool VideoStream::start()
 {
     if (m_streaming)

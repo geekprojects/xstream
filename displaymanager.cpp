@@ -39,7 +39,10 @@ bool DisplayManager::start()
 
     if (m_textures.empty())
     {
-        findDisplays();
+        if (!findDisplays())
+        {
+            return false;
+        }
     }
 
     log(DEBUG, "startStream: Registering callback...");
@@ -66,30 +69,10 @@ bool DisplayManager::findDisplays()
         {
             log(DEBUG, "findDisplay: %d: Found texture!");
 
-            glBindTexture(GL_TEXTURE_2D, i);
-
-            GLint width;
-            GLint height;
-            glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-            glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &height);
-            log(DEBUG, "findDisplay: Texture %d:  -> size=%d, %d", i, width, height);
-
-            if (width == 2048 && height == 2048)
+            texture = checkTexture(i);
+            if (texture != nullptr)
             {
-                unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
-                glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
-                log(DEBUG, "findDisplay: Texture %d:  -> %02x %02x %02x %02x", i, data[0], data[1], data[2], data[3]);
-                if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 0xff)
-                {
-                    log(DEBUG, "findDisplay: Texture %d:  -> Texture matches pattern!", i);
-                    texture = new Texture();
-                    texture->textureNum = i;
-                    texture->textureWidth = width;
-                    texture->textureHeight = height;
-                    texture->buffer = new uint8_t[width * height * 4];
-                    //texture->plugin = this;
-                    break;
-                }
+                break;
             }
         }
     }
@@ -135,6 +118,37 @@ bool DisplayManager::findDisplays()
     }
 
     return !m_textures.empty();
+}
+
+Texture* DisplayManager::checkTexture(int textureNum)
+{
+    glBindTexture(GL_TEXTURE_2D, textureNum);
+
+    GLint width;
+    GLint height;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &height);
+    log(DEBUG, "findDisplay: Texture %d:  -> size=%d, %d", textureNum, width, height);
+
+    if (width == 2048 && height == 2048)
+    {
+        unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
+        log(DEBUG, "findDisplay: Texture %d:  -> %02x %02x %02x %02x", textureNum, data[0], data[1], data[2], data[3]);
+        if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 0xff)
+        {
+            log(DEBUG, "findDisplay: Texture %d:  -> Texture matches pattern!", textureNum);
+            auto texture = new Texture();
+            texture->textureNum = textureNum;
+            texture->textureWidth = width;
+            texture->textureHeight = height;
+            texture->buffer = new uint8_t[width * height * 4];
+            return texture;
+        }
+    }
+
+    // Not the texture we're looking for!
+    return nullptr;
 }
 
 void DisplayManager::update()
