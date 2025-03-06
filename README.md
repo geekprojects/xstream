@@ -20,7 +20,7 @@ that I'm trying to reduce! And the impact on FPS appears to be minimal for me, a
 Just compile and put the library in to your Resources/plugins directory as xstream.xpl
 
 Then fire up your aircraft, start the stream from the menu and connect VLC/mpv etc to:
-rtsp://<ip-address>:8554/pfd (or /nd or /ecam).
+rtsp://&lt;ip-address&gt;:8554/pfd (or /nd or /ecam).
 
 
 ## Required Libraries
