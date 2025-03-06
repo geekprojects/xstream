@@ -36,7 +36,6 @@ message("XPLANE_INC: ${XPLANE_INC}")
 include_directories(include src)
 
 add_library(xscreen SHARED xstreamplugin.cpp xstreamplugin.h
-        test/test.cpp
         videostream.cpp
         videostream.h
         displaymanager.cpp
@@ -51,11 +50,4 @@ target_link_libraries(
         ${gstreamer_LDFLAGS} -lgstrtspserver-1.0.0 -lgstapp-1.0.0
         ${OPENGL_LIBRARIES}
         ${XPLM_LDFLAGS}
-)
-
-add_executable(test test/test.cpp)
-target_link_libraries(
-        test
-        -Wl,-rpath -Wl,/usr/local/lib
-        ${gstreamer_LDFLAGS} -lgstrtspserver-1.0.0 -lgstapp-1.0.0
 )
