@@ -38,7 +38,9 @@ include_directories(include src)
 add_library(xscreen SHARED xstreamplugin.cpp xstreamplugin.h
         test/test.cpp
         videostream.cpp
-        videostream.h)
+        videostream.h
+        displaymanager.cpp
+        displaymanager.h)
 target_compile_definitions(xscreen PUBLIC ${XPLM_CFLAGS})
 target_include_directories(xscreen PUBLIC ${XPLANE_INC})
 

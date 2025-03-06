@@ -13,12 +13,13 @@
 #include <XPLMUtilities.h>
 
 #include <gst/gst.h>
-#include <gst/rtsp-server/rtsp-server.h>
 
 #include <ufc/logger.h>
 
-#include <vector>
 #include <thread>
+
+class VideoStream;
+class DisplayManager;
 
 class XPPluginDataSource;
 
@@ -40,80 +41,21 @@ class XPLogPrinter : public UFC::LogPrinter
     }
 };
 
-class XScreenPlugin;
-
-struct Display
-{
-    XScreenPlugin* plugin;
-    GstElement* appSrc;
-
-    int x;
-    int y;
-    int width;
-    int height;
-    std::string name;
-
-    uint8_t* buffer;
-    int col = 0;
-};
-
-struct Texture
-{
-    XScreenPlugin* plugin;
-
-    int textureNum;
-    int textureWidth;
-    int textureHeight;
-    uint8_t* buffer;
-
-    std::vector<Display*> displays;
-};
 
 class XScreenPlugin : public UFC::Logger
 {
  private:
     XPLogPrinter m_logPrinter;
 
-    int m_menuContainer;
-    XPLMMenuID m_menuId;
+    int m_menuContainer = -1;
+    XPLMMenuID m_menuId = nullptr;
 
-    // GStreamer stuff
-    std::shared_ptr<std::thread> m_streamMainThread;
-    GMainLoop* m_loop;
-    GstRTSPServer* m_server;
-    //GstClockTime m_timestamp = 0;
-    bool m_streaming = false;
-    bool m_pushData = false;
-    float m_lastSent = 0.0f;
-
-    //guint m_sourceId;
-
-    std::vector<Texture*> m_textures;
-
-    static float initCallback(float elapsedMe, float elapsedSim, int counter, void * refcon);
-    float init(float elapsedMe, float elapsedSim, int counter);
+    std::shared_ptr<VideoStream> m_videoStream;
+    std::shared_ptr<DisplayManager> m_displayManager;
 
     static void menuCallback(void* menuRef, void* itemRef);
 
-    void copyDisplay(Texture* texture, Display* display);
-
-    void dumpTextures();
-    void findDisplay();
-
     void menu(void* itemRef);
-
-    static void dataSourceCallback(Display* ctx);
-    void dataSource(Display* display);
-
-    static void needDataCallback(GstElement* appsrc, guint unused, Display* ctx);
-    void needData(GstElement* appsrc, Display* display);
-    static void enoughDataCallback(GstElement* appsrc, guint unused, Display* ctx);
-    void enoughData(GstElement* appsrc, Display* display);
-
-    static void mediaConfigureCallback(GstRTSPMediaFactory* factory, GstRTSPMedia* media, Display* display);
-    void mediaConfigure(GstRTSPMediaFactory* factory, GstRTSPMedia* media, Display* display);
-
-    void streamMain();
 
 public:
     XScreenPlugin() : Logger("XScreenPlugin") {}
@@ -127,8 +69,8 @@ public:
 
     void receiveMessage(XPLMPluginID inFrom, int inMsg, void * inParam);
 
-    void dumpTexture(int i, const char * name);
-    void updateDisplay();
+    std::shared_ptr<VideoStream> getVideoStream() { return m_videoStream; }
+    std::shared_ptr<DisplayManager> getDisplayManager() { return m_displayManager; }
 };
 
 #endif //UFCPLUGIN_H
