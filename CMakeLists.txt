@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(xscreen)
+project(xstream)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -35,16 +35,16 @@ message("XPLANE_INC: ${XPLANE_INC}")
 
 include_directories(include src)
 
-add_library(xscreen SHARED xstreamplugin.cpp xstreamplugin.h
+add_library(xstream SHARED xstreamplugin.cpp xstreamplugin.h
         videostream.cpp
         videostream.h
         displaymanager.cpp
         displaymanager.h)
-target_compile_definitions(xscreen PUBLIC ${XPLM_CFLAGS})
-target_include_directories(xscreen PUBLIC ${XPLANE_INC})
+target_compile_definitions(xstream PUBLIC ${XPLM_CFLAGS})
+target_include_directories(xstream PUBLIC ${XPLANE_INC})
 
 target_link_libraries(
-        xscreen
+        xstream
         -Wl,-rpath -Wl,/usr/local/lib
         ${libufc_LDFLAGS}
         ${gstreamer_LDFLAGS} -lgstrtspserver-1.0.0 -lgstapp-1.0.0
