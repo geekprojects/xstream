@@ -7,6 +7,7 @@ include(FindOpenGL)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(libufc REQUIRED libufc)
+pkg_check_modules(libpng REQUIRED libpng)
 pkg_check_modules(gstreamer REQUIRED gstreamer-rtsp-1.0)
 
 SET(FLAGS_COMMON "-Wall -Werror -DGL_SILENCE_DEPRECATION=1")
@@ -16,6 +17,7 @@ SET(CMAKE_CXX_FLAGS_RELEASE  "${FLAGS_COMMON} -O3")
 add_definitions(
         -I/usr/local/include
         ${libufc_CFLAGS}
+        ${libpng_CFLAGS}
         ${gstreamer_CFLAGS}
 )
 
@@ -47,6 +49,7 @@ target_link_libraries(
         xstream
         -Wl,-rpath -Wl,/usr/local/lib
         ${libufc_LDFLAGS}
+        ${libpng_LDFLAGS}
         ${gstreamer_LDFLAGS} -lgstrtspserver-1.0.0 -lgstapp-1.0.0
         ${OPENGL_LIBRARIES}
         ${XPLM_LDFLAGS}

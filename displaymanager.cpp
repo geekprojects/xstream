@@ -13,6 +13,8 @@
 
 #include <fnmatch.h>
 
+#include <png.h>
+
 #ifdef __APPLE__
 #define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED 1
 #include <OpenGL/OpenGLAvailability.h>
@@ -307,6 +309,7 @@ void DisplayManager::copyDisplay(const shared_ptr<Texture>& texture, const share
 
 void DisplayManager::dumpTextures()
 {
+    string icao = readString("sim/aircraft/view/acf_ICAO");
     for (int i = 0; i < 1000; i++)
     {
         if (glIsTexture(i))
@@ -314,27 +317,61 @@ void DisplayManager::dumpTextures()
             log(DEBUG, "dumpFBOs: %d: Found texture!");
 
             glBindTexture(GL_TEXTURE_2D, i);
-            dumpTexture(i, "dump");
-            glBindTexture(GL_TEXTURE_2D, 0);
+            dumpTexture(i, icao);
         }
     }
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void DisplayManager::dumpTexture(int i, const char* name)
+void DisplayManager::dumpTexture(int i, std::string icao)
 {
     GLint width;
     GLint height;
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &height);
-    log(DEBUG, "dumpTexture: %s %d:  -> size=%d, %d", name, i, width, height);
 
     if (width >= 2048 && height >= 2048)
     {
         unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
+
         char filename[1024];
-        snprintf(filename, 1024, "dump/texture_%s_%d.dat", name, i);
+        snprintf(filename, 1024, "dump/texture_%s_%d.png", icao.c_str(), i);
+
         FILE* fp = fopen(filename, "wb");
+        if (fp == nullptr)
+        {
+            log(ERROR, "dumpTexture: Failed to open file %s", filename);
+            return;
+        }
+        png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+        png_infop info_ptr = png_create_info_struct(png_ptr);
+        png_init_io(png_ptr, fp);
+
+        // Output is 8bit depth, RGBA format.
+        png_set_IHDR(
+          png_ptr,
+          info_ptr,
+          width, height,
+          8,
+          PNG_COLOR_TYPE_RGBA,
+          PNG_INTERLACE_NONE,
+          PNG_COMPRESSION_TYPE_DEFAULT,
+          PNG_FILTER_TYPE_DEFAULT
+        );
+        png_write_info(png_ptr, info_ptr);
+
+        png_bytep row = data.get();
+        for (int y = 0; y < height; y++)
+        {
+            png_write_row(png_ptr, row);
+            row += width * 4;
+        }
+        png_write_end(png_ptr, nullptr);
+        fclose(fp);
+
+        snprintf(filename, 1024, "dump/texture_%s_%d.dat", icao.c_str(), i);
+        fp = fopen(filename, "wb");
         if (fp == nullptr)
         {
             log(ERROR, "dumpTexture: Failed to open file %s", filename);
