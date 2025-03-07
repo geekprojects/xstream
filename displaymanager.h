@@ -12,6 +12,7 @@
 #include <XPLMDisplay.h>
 
 #include <ufc/logger.h>
+#include <yaml-cpp/node/node.h>
 
 class XStreamPlugin;
 struct Texture;
@@ -63,10 +64,13 @@ class DisplayManager : private UFC::Logger
 
     static int updateCallback(XPLMDrawingPhase inPhase, [[maybe_unused]] int inIsBefore, void *inRefcon);
 
-    std::shared_ptr<Texture> checkTexture(int textureNum);
+    std::shared_ptr<Texture> checkTexture(YAML::Node &displayDef, int textureNum, YAML::Node &textureDef);
     void dumpTexture(int i, const char * name);
 
     void update();
+
+
+    bool findDefinition(YAML::Node &result);
 
  public:
     DisplayManager() : Logger("DisplayManager") {}
@@ -76,7 +80,6 @@ class DisplayManager : private UFC::Logger
     bool stop();
 
     bool findDisplays();
-
     [[nodiscard]] std::vector<std::shared_ptr<Display>> getDisplays() const { return m_displays; }
 
     void dumpTextures();

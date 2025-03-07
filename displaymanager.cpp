@@ -6,6 +6,12 @@
 
 #include <XPLMProcessing.h>
 #include <XPLMDisplay.h>
+#include <XPLMDataAccess.h>
+#include <filesystem>
+
+#include <yaml-cpp/yaml.h>
+
+#include <fnmatch.h>
 
 #ifdef __APPLE__
 #define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED 1
@@ -66,14 +72,21 @@ bool DisplayManager::stop()
 
 bool DisplayManager::findDisplays()
 {
+    YAML::Node displayDef;
+    if (!findDefinition(displayDef))
+    {
+        return false;
+    }
+
     shared_ptr<Texture> texture = nullptr;
+    YAML::Node textureNode;
     for (int i = 1; i < 1000; i++)
     {
         if (glIsTexture(i))
         {
             log(DEBUG, "findDisplay: %d: Found texture!");
 
-            texture = checkTexture(i);
+            texture = checkTexture(displayDef, i, textureNode);
             if (texture != nullptr)
             {
                 break;
@@ -84,55 +97,114 @@ bool DisplayManager::findDisplays()
 
     if (texture != nullptr)
     {
-        log(DEBUG, "findDisplay: Adding display for texture %d\n", texture->textureNum);
+        log(DEBUG, "findDisplay: Adding display for texture %d", texture->textureNum);
 
-        // PFD
+        YAML::Node displaysNode = textureNode["displays"];
+        for (auto displayNode : displaysNode)
         {
-            auto display = make_shared<Display>(
-                0,
-                512,
-                512,
-                512,
-                "pfd",
+             auto display = make_shared<Display>(
+                displayNode["x"].as<int>(),
+                displayNode["y"].as<int>(),
+                displayNode["width"].as<int>(),
+                displayNode["height"].as<int>(),
+                displayNode["name"].as<string>(),
                 texture);
             texture->displays.push_back(display);
             m_displays.push_back(display);
         }
-
-        // ND
-        {
-            auto display = make_shared<Display>(
-                512,
-                512,
-                512,
-                512,
-                "nd",
-                texture);
-            texture->displays.push_back(display);
-            m_displays.push_back(display);
-        }
-
-        // ECAM
-        {
-            auto display = make_shared<Display>(
-                1024,
-                512,
-                512,
-                512,
-                "ecam",
-                texture
-                );
-            texture->displays.push_back(display);
-            m_displays.push_back(display);
-        }
-
         m_textures.push_back(texture);
     }
 
     return !m_textures.empty();
 }
 
-shared_ptr<Texture> DisplayManager::checkTexture(int textureNum)
+std::string readString(const std::string& dataRefName)
+{
+    XPLMDataRef dataRef = XPLMFindDataRef(dataRefName.c_str());
+    if (dataRef == nullptr)
+    {
+        return "";
+    }
+
+    // Get the length
+    int bytes = XPLMGetDatab(dataRef, nullptr, 0, 0);
+
+    // Read the value
+    char buffer[bytes + 1];
+    XPLMGetDatab(dataRef, buffer, 0, bytes);
+    buffer[bytes] = '\0';
+
+    return {buffer};
+}
+
+bool DisplayManager::findDefinition(YAML::Node& result)
+{
+    string aircraftAuthor = readString("sim/aircraft/view/acf_studio");
+    if (aircraftAuthor.empty())
+    {
+        aircraftAuthor = readString("sim/aircraft/view/acf_author");
+    }
+    string aircraftICAO = readString("sim/aircraft/view/acf_ICAO");
+
+    log(DEBUG, "findDefinition: Author: %s, ICAO type: %s", aircraftAuthor.c_str(), aircraftICAO.c_str());
+
+    for (const auto & entry : filesystem::directory_iterator("Resources/plugins/xstream/data"))
+    {
+        if (entry.path().extension() == ".yaml")
+        {
+            auto aircraftFile = YAML::LoadFile(entry.path());
+            if (!aircraftFile["author"] || !aircraftFile["icao"])
+            {
+                log(ERROR, "%s: Not a valid aircraft definition", entry.path().c_str());
+                continue;
+            }
+            auto fileAuthor = aircraftFile["author"].as<string>();
+            vector<string> fileICAOs;
+            auto icaoNode = aircraftFile["icao"];
+            if (icaoNode.IsScalar())
+            {
+                auto fileICAO = aircraftFile["icao"].as<string>();
+                fileICAOs.push_back(fileICAO);
+            }
+            else
+            {
+                for (auto fileICAO : icaoNode)
+                {
+                    fileICAOs.push_back(fileICAO.as<string>());
+                }
+            }
+
+            int match = fnmatch(fileAuthor.c_str(), aircraftAuthor.c_str(), 0);
+            if (match != 0)
+            {
+                continue;
+            }
+
+            bool foundICAO = false;
+            for (const auto& fileICAO : fileICAOs)
+            {
+                match = fnmatch(aircraftICAO.c_str(), fileICAO.c_str(), 0);
+                if (match == 0)
+                {
+                    foundICAO = true;
+                    break;
+                }
+            }
+
+            if (!foundICAO)
+            {
+                continue;
+            }
+
+            log(INFO, "%s: Aircraft definition found!", entry.path().c_str());
+            result = aircraftFile;
+            return true;
+        }
+    }
+    return false;
+}
+
+shared_ptr<Texture> DisplayManager::checkTexture(YAML::Node& displayDef, int textureNum, YAML::Node& matchingDef)
 {
     glBindTexture(GL_TEXTURE_2D, textureNum);
 
@@ -140,22 +212,42 @@ shared_ptr<Texture> DisplayManager::checkTexture(int textureNum)
     GLint height;
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &height);
-    log(DEBUG, "findDisplay: Texture %d:  -> size=%d, %d", textureNum, width, height);
+    //log(DEBUG, "findDisplay: Texture %d:  -> size=%d, %d", textureNum, width, height);
 
-    if (width == 2048 && height == 2048)
+    YAML::Node textures = displayDef["textures"];
+    for (YAML::Node textureNode : textures)
     {
-        const unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
-        log(DEBUG, "findDisplay: Texture %d:  -> %02x %02x %02x %02x", textureNum, data[0], data[1], data[2], data[3]);
-        if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 0xff)
+        int requiredWidth = textureNode["width"].as<int>();
+        int requiredHeight = textureNode["height"].as<int>();
+        vector<int> requiredBytes = textureNode["bytes"].as<vector<int>>();
+
+        if (width == requiredWidth && height == requiredHeight)
         {
-            log(DEBUG, "findDisplay: Texture %d:  -> Texture matches pattern!", textureNum);
-            auto texture = make_shared<Texture>();
-            texture->textureNum = textureNum;
-            texture->textureWidth = width;
-            texture->textureHeight = height;
-            texture->buffer = shared_ptr<uint8_t[]>(new uint8_t[width * height * 4]);
-            return texture;
+            const unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
+            glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
+            log(DEBUG, "findDisplay: Texture %d: Correct size. Checking bytes (%02x %02x %02x %02x)", textureNum, data[0], data[1], data[2], data[3]);
+
+            bool bytesMatch = true;
+            for (int i = 0; i < requiredBytes.size(); i++)
+            {
+                if (requiredBytes[i] != data[i])
+                {
+                    bytesMatch = false;
+                    break;
+                }
+            }
+
+            if (bytesMatch)
+            {
+                log(DEBUG, "findDisplay: Texture %d:  -> Texture matches pattern!", textureNum);
+                auto texture = make_shared<Texture>();
+                texture->textureNum = textureNum;
+                texture->textureWidth = width;
+                texture->textureHeight = height;
+                texture->buffer = shared_ptr<uint8_t[]>(new uint8_t[width * height * 4]);
+                matchingDef = textureNode;
+                return texture;
+            }
         }
     }
 

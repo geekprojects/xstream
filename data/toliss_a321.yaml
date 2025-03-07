@@ -1,0 +1,33 @@
+
+name: Toliss A321
+author: Gliding Kiwi
+icao:
+  - A321
+  - A21N
+
+textures:
+  - width: 2048
+    height: 2048
+    bytes: [0, 0, 0, 255]
+    displays:
+      - name: pfd
+        x: 0
+        y: 512
+        width: 514
+        height: 512
+        process: flip_vertical
+
+      - name: nd
+        x: 512
+        y: 512
+        width: 514
+        height: 512
+        process: flip_vertical
+
+      - name: ecam
+        x: 1024
+        y: 512
+        width: 514
+        height: 512
+        process: flip_vertical
+
