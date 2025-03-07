@@ -49,6 +49,7 @@ class XStreamPlugin : private UFC::Logger
 
     int m_menuContainer = -1;
     XPLMMenuID m_menuId = nullptr;
+    int m_streamMenuIndex = -1;
 
     std::shared_ptr<VideoStream> m_videoStream;
     std::shared_ptr<DisplayManager> m_displayManager;

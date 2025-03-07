@@ -24,8 +24,10 @@ int XStreamPlugin::start(char* outName, char* outSig, char* outDesc)
     m_menuContainer = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "XStream", nullptr, 0);
     m_menuId = XPLMCreateMenu("XStream", XPLMFindPluginsMenu(), m_menuContainer, menuCallback, this);
 
-    XPLMAppendMenuItem(m_menuId, "Start Streaming", (void*)3, 1);
+    m_streamMenuIndex = XPLMAppendMenuItem(m_menuId, "Start Streaming", (void*)3, 1);
     XPLMAppendMenuItem(m_menuId, "Dump Textures", (void*)2, 1);
+
+    XPLMCheckMenuItem(m_menuId, m_streamMenuIndex, xplm_Menu_Unchecked);
 
     m_videoStream = make_shared<VideoStream>(this);
     m_displayManager = make_shared<DisplayManager>();
@@ -53,6 +55,13 @@ void XStreamPlugin::disable()
 
 void XStreamPlugin::startStream()
 {
+    if (m_videoStream->isStreaming())
+    {
+        // We're already streaming!
+        return;
+    }
+
+
     bool res;
     res = m_displayManager->findDisplays();
     if (!res)
@@ -65,7 +74,14 @@ void XStreamPlugin::startStream()
     {
         return;
     }
-    m_videoStream->start();
+
+    res = m_videoStream->start();
+    if (!res)
+    {
+        return;
+    }
+
+
 }
 
 void XStreamPlugin::receiveMessage(XPLMPluginID inFrom, int inMsg, void* inParam)
@@ -93,7 +109,6 @@ void XStreamPlugin::menuCallback(void* menuRef, void* itemRef)
     }
 }
 
-
 void XStreamPlugin::menu(void* itemRef)
 {
     log(DEBUG, "menu: itemRef=%p", itemRef);
@@ -104,7 +119,16 @@ void XStreamPlugin::menu(void* itemRef)
     }
     else if (item == 3)
     {
-        startStream();
+        if (!m_videoStream->isStreaming())
+        {
+            startStream();
+            XPLMSetMenuItemName(m_menuId, m_streamMenuIndex, "Stop Streaming", 0);
+        }
+        else
+        {
+            XPLMSetMenuItemName(m_menuId, m_streamMenuIndex, "Start Streaming", 0);
+            stop();
+        }
     }
 }
 

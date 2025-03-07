@@ -66,7 +66,7 @@ bool DisplayManager::stop()
 
 bool DisplayManager::findDisplays()
 {
-    Texture* texture = nullptr;
+    shared_ptr<Texture> texture = nullptr;
     for (int i = 1; i < 1000; i++)
     {
         if (glIsTexture(i))
@@ -88,48 +88,40 @@ bool DisplayManager::findDisplays()
 
         // PFD
         {
-            auto display = new Display();
-            //display->plugin = this;
-            display->x = 0;
-            display->y = 512;
-            display->width = 512;
-            display->height = 512;
-            display->buffer = new uint8_t[display->width * display->height * 4];
-            memset(display->buffer, 0, display->width * display->height * 4);
-            display->name = "pfd";
-            display->texture = texture;
+            auto display = make_shared<Display>(
+                0,
+                512,
+                512,
+                512,
+                "pfd",
+                texture);
             texture->displays.push_back(display);
             m_displays.push_back(display);
         }
 
         // ND
         {
-            auto display = new Display();
-            //display->plugin = this;
-            display->x = 512;
-            display->y = 512;
-            display->width = 512;
-            display->height = 512;
-            display->buffer = new uint8_t[display->width * display->height * 4];
-            memset(display->buffer, 0, display->width * display->height * 4);
-            display->name = "nd";
-            display->texture = texture;
+            auto display = make_shared<Display>(
+                512,
+                512,
+                512,
+                512,
+                "nd",
+                texture);
             texture->displays.push_back(display);
             m_displays.push_back(display);
         }
 
         // ECAM
         {
-            auto display = new Display();
-            //display->plugin = this;
-            display->x = 1024;
-            display->y = 512;
-            display->width = 512;
-            display->height = 512;
-            display->buffer = new uint8_t[display->width * display->height * 4];
-            memset(display->buffer, 0, display->width * display->height * 4);
-            display->name = "ecam";
-            display->texture = texture;
+            auto display = make_shared<Display>(
+                1024,
+                512,
+                512,
+                512,
+                "ecam",
+                texture
+                );
             texture->displays.push_back(display);
             m_displays.push_back(display);
         }
@@ -140,7 +132,7 @@ bool DisplayManager::findDisplays()
     return !m_textures.empty();
 }
 
-Texture* DisplayManager::checkTexture(int textureNum)
+shared_ptr<Texture> DisplayManager::checkTexture(int textureNum)
 {
     glBindTexture(GL_TEXTURE_2D, textureNum);
 
@@ -152,17 +144,17 @@ Texture* DisplayManager::checkTexture(int textureNum)
 
     if (width == 2048 && height == 2048)
     {
-        unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
+        const unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
         log(DEBUG, "findDisplay: Texture %d:  -> %02x %02x %02x %02x", textureNum, data[0], data[1], data[2], data[3]);
         if (data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 0xff)
         {
             log(DEBUG, "findDisplay: Texture %d:  -> Texture matches pattern!", textureNum);
-            auto texture = new Texture();
+            auto texture = make_shared<Texture>();
             texture->textureNum = textureNum;
             texture->textureWidth = width;
             texture->textureHeight = height;
-            texture->buffer = new uint8_t[width * height * 4];
+            texture->buffer = shared_ptr<uint8_t[]>(new uint8_t[width * height * 4]);
             return texture;
         }
     }
@@ -185,14 +177,16 @@ void DisplayManager::update()
     }
     m_lastUpdate = now;
 
-    for (Texture* texture : m_textures)
+    for (const auto& texture : m_textures)
     {
+#ifdef DEBUG
         log(DEBUG, "updateDisplay: Texture: %d", texture->textureNum);
+#endif
         glBindTexture(GL_TEXTURE_2D, texture->textureNum);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->buffer);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->buffer.get());
 
         // Slice the texture up in to the separate displays
-        for (Display* display : texture->displays)
+        for (const auto& display : texture->displays)
         {
             copyDisplay(texture, display);
         }
@@ -200,7 +194,7 @@ void DisplayManager::update()
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void DisplayManager::copyDisplay(const Texture* texture, const Display* display)
+void DisplayManager::copyDisplay(const shared_ptr<Texture>& texture, const shared_ptr<Display>& display)
 {
     uintptr_t srcPos = 0;
     uintptr_t dstStride = display->width * 4;
@@ -213,7 +207,7 @@ void DisplayManager::copyDisplay(const Texture* texture, const Display* display)
     // Copy backwards!
     for (int y = 0; y < display->height; y++)
     {
-        memcpy(display->buffer + dstPos, texture->buffer + srcPos, dstStride);
+        memcpy(display->buffer.get() + dstPos, texture->buffer.get() + srcPos, dstStride);
         srcPos += srcStride;
         dstPos -= dstStride;
     }
@@ -244,11 +238,16 @@ void DisplayManager::dumpTexture(int i, const char* name)
 
     if (width >= 2048 && height >= 2048)
     {
-        unique_ptr<unsigned short[]> data(new unsigned short[width * height * 4]);
+        unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
         char filename[1024];
         snprintf(filename, 1024, "dump/texture_%s_%d.dat", name, i);
         FILE* fp = fopen(filename, "wb");
+        if (fp == nullptr)
+        {
+            log(ERROR, "dumpTexture: Failed to open file %s", filename);
+            return;
+        }
         fwrite(data.get(), width * height * 4, 1, fp);
         fclose(fp);
     }

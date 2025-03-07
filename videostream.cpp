@@ -35,55 +35,35 @@ bool VideoStream::stop()
     return true;
 }
 
-void VideoStream::enoughDataCallback(GstElement* appsrc, guint unused, DisplayContext* displayData)
+void VideoStream::enoughDataCallback([[maybe_unused]] GstElement* appsrc, [[maybe_unused]] guint unused, DisplayContext* displayData)
 {
-    displayData->videoStream->enoughData(appsrc, displayData->display);
+    displayData->videoStream->enoughData(displayData->display);
 }
 
-void VideoStream::enoughData(GstElement* appsrc, Display* display)
+void VideoStream::enoughData(const shared_ptr<Display> &display)
 {
-    log(DEBUG, "enoughData: display=%p", display);
-    m_pushData = false;
+    log(DEBUG, "enoughData: display=%s", display->name.c_str());
 }
 
-void VideoStream::needDataCallback(GstElement * appsrc, [[maybe_unused]] guint unused, DisplayContext* displayData)
+void VideoStream::needDataCallback([[maybe_unused]] GstElement* appsrc, [[maybe_unused]] guint unused, const DisplayContext* displayData)
 {
-    displayData->videoStream->needData(appsrc, displayData->display);
+    displayData->videoStream->needData(displayData->display);
 }
 
-void VideoStream::needData(GstElement* appsrc, Display* display)
+void VideoStream::needData(const shared_ptr<Display> &display)
 {
+#ifdef DEBUG
     log(DEBUG, "needData: display=%p", appsrc);
-    m_pushData = true;
+#endif
     guint size = display->width * display->height * 4;
 
     auto buffer = gst_buffer_new_allocate (nullptr, size, nullptr);
-#if 0
-    for (guint i = 0; i < size; i+=4)
-    {
-        //display->buffer[i + 0] = display->col;
-        //display->buffer[i + 1] = display->col;
-        //display->buffer[i + 2] = display->col;
-        display->buffer[i + 3] = 255;
-    }
-#endif
-    gst_buffer_fill(buffer, 0, display->buffer, size);
-
-    //gst_buffer_memset (buffer, 0, 0xff, size);
-
-    /* increment the timestamp every 1/2 second */
-#if 0
-    //GST_BUFFER_PTS (buffer) = m_timestamp;
-    GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, 2);
-    GST_BUFFER_FLAGS(buffer) |= GST_BUFFER_FLAG_LIVE;
-    m_timestamp += GST_BUFFER_DURATION(buffer);
-#endif
+    gst_buffer_fill(buffer, 0, display->buffer.get(), size);
 
     GstFlowReturn ret;
     g_signal_emit_by_name (display->appSrc, "push-buffer", buffer, &ret);
     if (ret == GST_FLOW_FLUSHING)
     {
-        //m_pushData = false;
         log(ERROR, "dataSource: GST_FLOW_FLUSHING");
     }
     else if (ret != GST_FLOW_OK)
@@ -93,9 +73,9 @@ void VideoStream::needData(GstElement* appsrc, Display* display)
     gst_buffer_unref (buffer);
 }
 
-void VideoStream::mediaConfigure(GstRTSPMediaFactory* factory, GstRTSPMedia* media, Display* display)
+void VideoStream::mediaConfigure(GstRTSPMedia* media, const shared_ptr<Display> &display)
 {
-    log(DEBUG, "mediaConfigure: media=%p, display=%p", media, display);
+    log(DEBUG, "mediaConfigure: media=%p, display=%s", media, display->name.c_str());
 
     /* get the element used for providing the streams of the media */
     auto element = gst_rtsp_media_get_element (media);
@@ -133,7 +113,7 @@ void VideoStream::mediaConfigure(GstRTSPMediaFactory* factory, GstRTSPMedia* med
 
 void VideoStream::mediaConfigureCallback(GstRTSPMediaFactory* factory, GstRTSPMedia* media, DisplayContext* displayData)
 {
-    displayData->videoStream->mediaConfigure(factory, media, displayData->display);
+    displayData->videoStream->mediaConfigure(media, displayData->display);
 }
 
 void VideoStream::streamMain()
@@ -164,7 +144,7 @@ void VideoStream::streamMain()
     log(DEBUG, "streamMain: Creating mount points...");
     auto mounts = gst_rtsp_server_get_mount_points(m_server);
 
-    for (auto display : m_xscreenPlugin->getDisplayManager()->getDisplays())
+    for (const auto& display : m_xscreenPlugin->getDisplayManager()->getDisplays())
     {
         log(DEBUG, "streamMain: Creating factory for: /%s", display->name.c_str());
         auto factory = gst_rtsp_media_factory_new();
@@ -203,7 +183,7 @@ void VideoStream::streamMain()
 
     g_object_unref (mounts);
     log(DEBUG, "streamMain: Attaching server...");
-    gst_rtsp_server_attach(m_server, NULL);
+    gst_rtsp_server_attach(m_server, nullptr);
 
     m_streaming = true;
 
