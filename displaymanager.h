@@ -65,7 +65,7 @@ class DisplayManager : private UFC::Logger
     static int updateCallback(XPLMDrawingPhase inPhase, [[maybe_unused]] int inIsBefore, void *inRefcon);
 
     std::shared_ptr<Texture> checkTexture(YAML::Node &displayDef, int textureNum, YAML::Node &textureDef);
-    void dumpTexture(int i, const char * name);
+    void dumpTexture(int i, std::string icao);
 
     void update();
 
