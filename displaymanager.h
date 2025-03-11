@@ -27,7 +27,7 @@ struct Display
     int height = 0;
     std::string name;
     std::shared_ptr<Texture> texture;
-    std::shared_ptr<uint8_t[]> buffer;
+    uint8_t* buffer = nullptr;
 
     Display() = default;
 
@@ -39,18 +39,28 @@ struct Display
         name(name),
         texture(texture)
     {
-        this->buffer = std::shared_ptr<uint8_t[]>(new uint8_t[width * height * 4]);
+        buffer = new uint8_t[width * height * 4];
+    }
+
+    ~Display()
+    {
+        delete[] buffer;
     }
 };
 
 struct Texture
 {
-    int textureNum;
-    int textureWidth;
-    int textureHeight;
-    std::shared_ptr<uint8_t[]> buffer;
+    int textureNum = 0;
+    int textureWidth = 0;
+    int textureHeight = 0;
+    uint8_t* buffer = nullptr;
 
     std::vector<std::shared_ptr<Display>> displays;
+
+    ~Texture()
+    {
+        delete[] buffer;
+    }
 };
 
 class DisplayManager : private UFC::Logger

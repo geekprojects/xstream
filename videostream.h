@@ -16,6 +16,12 @@ struct Display;
 class XStreamPlugin;
 class VideoStream;
 
+enum Codec
+{
+    CODEC_H264,
+    CODEC_MJPEG
+};
+
 struct DisplayContext
 {
     std::shared_ptr<Display> display;
@@ -31,6 +37,8 @@ class VideoStream : private UFC::Logger
     GMainLoop* m_loop = nullptr;
     GstRTSPServer* m_server = nullptr;
     bool m_streaming = false;
+
+    Codec m_codec = CODEC_H264;
 
     static void needDataCallback(GstElement* appsrc, guint unused, const DisplayContext* displayData);
     void needData(const std::shared_ptr<Display> &display);

@@ -58,7 +58,7 @@ void VideoStream::needData(const shared_ptr<Display> &display)
     guint size = display->width * display->height * 4;
 
     auto buffer = gst_buffer_new_allocate (nullptr, size, nullptr);
-    gst_buffer_fill(buffer, 0, display->buffer.get(), size);
+    gst_buffer_fill(buffer, 0, display->buffer, size);
 
     GstFlowReturn ret;
     g_signal_emit_by_name (display->appSrc, "push-buffer", buffer, &ret);
@@ -154,21 +154,36 @@ void VideoStream::streamMain()
         // Our "appsrc" where we provide the data
         launch += "appsrc name=mysrc block=true is-live=1 do-timestamp=1 min-latency=0 ! ";
 
+        // Add a queue, this will discard old frames!
+        launch += " queue max-size-time=500000000 ! ";
+
         // Convert it in to YUV
         launch += "videoconvert ! video/x-raw,format=I420 ! ";
 
-        // Encode it as H264
+        // Encode it
+        switch (m_codec)
+        {
+            case CODEC_H264:
+                // May be slow to encode, lower bandwidth
 #ifdef __APPLE__
-        // Use Apple Media, using hardware acceleration where available
-        launch += "vtenc_h264 quality=0.25 realtime=true ! ";
+                // Use Apple Media, using hardware acceleration where available
+                launch += "vtenc_h264 quality=0.25 realtime=true ! ";
 #else
-        // Standard H264 encoder
-        launch += "x264enc ! ";
+                // Standard H264 encoder
+                launch += "x264enc ! ";
 #endif
 
-        // Make it streamable
-        launch += "rtph264pay name=pay0 pt=96 ";
-        launch += ")";
+                // Make it streamable
+                launch += "rtph264pay name=pay0 pt=96 ";
+                break;
+
+            case CODEC_MJPEG:
+                // Faster encoding, higher bandwidth
+                launch += "jpegenc !";
+                launch += " rtpjpegpay name=pay0";
+                break;
+        }
+        launch += " )";
 
         gst_rtsp_media_factory_set_launch(factory, launch.c_str());
 

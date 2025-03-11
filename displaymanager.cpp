@@ -214,15 +214,14 @@ shared_ptr<Texture> DisplayManager::checkTexture(YAML::Node& displayDef, int tex
     GLint height;
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &height);
-    //log(DEBUG, "findDisplay: Texture %d:  -> size=%d, %d", textureNum, width, height);
+    log(DEBUG, "findDisplay: Texture %d:  -> size=%d, %d", textureNum, width, height);
 
     YAML::Node textures = displayDef["textures"];
-    for (YAML::Node textureNode : textures)
+    for (const YAML::Node& textureNode : textures)
     {
         int requiredWidth = textureNode["width"].as<int>();
         int requiredHeight = textureNode["height"].as<int>();
-        vector<int> requiredBytes = textureNode["bytes"].as<vector<int>>();
-
+        auto requiredBytes = textureNode["bytes"].as<vector<int>>();
         if (width == requiredWidth && height == requiredHeight)
         {
             const unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
@@ -246,7 +245,7 @@ shared_ptr<Texture> DisplayManager::checkTexture(YAML::Node& displayDef, int tex
                 texture->textureNum = textureNum;
                 texture->textureWidth = width;
                 texture->textureHeight = height;
-                texture->buffer = shared_ptr<uint8_t[]>(new uint8_t[width * height * 4]);
+                texture->buffer = new uint8_t[width * height * 4];
                 matchingDef = textureNode;
                 return texture;
             }
@@ -277,7 +276,7 @@ void DisplayManager::update()
         log(DEBUG, "updateDisplay: Texture: %d", texture->textureNum);
 #endif
         glBindTexture(GL_TEXTURE_2D, texture->textureNum);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->buffer.get());
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->buffer);
 
         // Slice the texture up in to the separate displays
         for (const auto& display : texture->displays)
@@ -301,7 +300,7 @@ void DisplayManager::copyDisplay(const shared_ptr<Texture>& texture, const share
     // Copy backwards!
     for (int y = 0; y < display->height; y++)
     {
-        memcpy(display->buffer.get() + dstPos, texture->buffer.get() + srcPos, dstStride);
+        memcpy(display->buffer + dstPos, texture->buffer + srcPos, dstStride);
         srcPos += srcStride;
         dstPos -= dstStride;
     }
@@ -314,7 +313,7 @@ void DisplayManager::dumpTextures()
     {
         if (glIsTexture(i))
         {
-            log(DEBUG, "dumpFBOs: %d: Found texture!");
+            log(DEBUG, "dumpTextures: %d: Found texture!");
 
             glBindTexture(GL_TEXTURE_2D, i);
             dumpTexture(i, icao);
