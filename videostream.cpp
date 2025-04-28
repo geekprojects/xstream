@@ -7,7 +7,6 @@
 #include "xstreamplugin.h"
 
 using namespace std;
-using namespace UFC;
 
 bool VideoStream::start()
 {

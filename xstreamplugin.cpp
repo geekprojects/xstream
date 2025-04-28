@@ -9,7 +9,6 @@
 #include "displaymanager.h"
 
 using namespace std;
-using namespace UFC;
 
 XStreamPlugin g_ufcPlugin;
 

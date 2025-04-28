@@ -10,7 +10,7 @@
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
 
-#include <ufc/logger.h>
+#include "logger.h"
 
 struct Display;
 class XStreamPlugin;
@@ -28,7 +28,7 @@ struct DisplayContext
     VideoStream* videoStream;
 };
 
-class VideoStream : private UFC::Logger
+class VideoStream : private Logger
 {
  private:
     XStreamPlugin* m_xscreenPlugin;
@@ -38,7 +38,7 @@ class VideoStream : private UFC::Logger
     GstRTSPServer* m_server = nullptr;
     bool m_streaming = false;
 
-    Codec m_codec = CODEC_H264;
+    Codec m_codec = CODEC_MJPEG;
 
     static void needDataCallback(GstElement* appsrc, guint unused, const DisplayContext* displayData);
     void needData(const std::shared_ptr<Display> &display);

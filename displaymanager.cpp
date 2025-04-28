@@ -29,7 +29,6 @@
 #endif
 
 using namespace std;
-using namespace UFC;
 
 int DisplayManager::updateCallback([[maybe_unused]] XPLMDrawingPhase inPhase, [[maybe_unused]] int inIsBefore, void *inRefcon)
 {
@@ -132,7 +131,7 @@ std::string readString(const std::string& dataRefName)
     int bytes = XPLMGetDatab(dataRef, nullptr, 0, 0);
 
     // Read the value
-    char buffer[bytes + 1];
+    char buffer[4096];
     XPLMGetDatab(dataRef, buffer, 0, bytes);
     buffer[bytes] = '\0';
 
@@ -313,8 +312,6 @@ void DisplayManager::dumpTextures()
     {
         if (glIsTexture(i))
         {
-            log(DEBUG, "dumpTextures: %d: Found texture!");
-
             glBindTexture(GL_TEXTURE_2D, i);
             dumpTexture(i, icao);
         }
@@ -331,6 +328,8 @@ void DisplayManager::dumpTexture(int i, std::string icao)
 
     if (width >= 2048 && height >= 2048)
     {
+        log(DEBUG, "dumpTexture: Texture %d: Size: %d, %d", i, width, height);
+
         unique_ptr<uint8_t[]> data(new uint8_t[width * height * 4]);
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
 

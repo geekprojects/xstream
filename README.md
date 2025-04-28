@@ -27,9 +27,6 @@ rtsp://&lt;ip-address&gt;:8554/pfd (or /nd or /ecam).
 * yaml-cpp
 * GStreamer
 
-It currently requires my [UFC](https://github.com/geekprojects/ufc) library, but I'm
-planning on removing that dependency.
-
 
 # Contributions
 Contributions of code and display definitions are more than welcome! Send me a PR!

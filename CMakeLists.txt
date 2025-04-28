@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 include(FindOpenGL)
 find_package(PkgConfig REQUIRED)
 
-pkg_check_modules(libufc REQUIRED libufc)
 pkg_check_modules(libpng REQUIRED libpng)
+pkg_check_modules(yamlcpp REQUIRED yaml-cpp)
 pkg_check_modules(gstreamer REQUIRED gstreamer-rtsp-1.0)
 
 SET(FLAGS_COMMON "-Wall -Werror -DGL_SILENCE_DEPRECATION=1")
@@ -16,7 +16,7 @@ SET(CMAKE_CXX_FLAGS_RELEASE  "${FLAGS_COMMON} -O3")
 
 add_definitions(
         -I/usr/local/include
-        ${libufc_CFLAGS}
+        ${yamlcpp_CFLAGS}
         ${libpng_CFLAGS}
         ${gstreamer_CFLAGS}
 )
@@ -41,16 +41,26 @@ add_library(xstream SHARED xstreamplugin.cpp xstreamplugin.h
         videostream.cpp
         videostream.h
         displaymanager.cpp
-        displaymanager.h)
+        displaymanager.h
+        logger.cpp
+        logger.h
+)
 target_compile_definitions(xstream PUBLIC ${XPLM_CFLAGS})
 target_include_directories(xstream PUBLIC ${XPLANE_INC})
 
 target_link_libraries(
         xstream
         -Wl,-rpath -Wl,/usr/local/lib
-        ${libufc_LDFLAGS}
+        ${yamlcpp_LDFLAGS}
         ${libpng_LDFLAGS}
         ${gstreamer_LDFLAGS} -lgstrtspserver-1.0.0 -lgstapp-1.0.0
         ${OPENGL_LIBRARIES}
         ${XPLM_LDFLAGS}
 )
+
+#add_executable(test test/test.cpp)
+#target_link_libraries(
+#        test
+#        -Wl,-rpath -Wl,/usr/local/lib
+#        ${gstreamer_LDFLAGS} -lgstrtspserver-1.0.0 -lgstapp-1.0.0
+#)

@@ -11,7 +11,7 @@
 
 #include <XPLMDisplay.h>
 
-#include <ufc/logger.h>
+#include "logger.h"
 #include <yaml-cpp/node/node.h>
 
 class XStreamPlugin;
@@ -63,7 +63,7 @@ struct Texture
     }
 };
 
-class DisplayManager : private UFC::Logger
+class DisplayManager : private Logger
 {
     bool m_running = false;
     std::vector<std::shared_ptr<Texture>> m_textures;

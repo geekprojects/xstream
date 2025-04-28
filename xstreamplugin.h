@@ -14,7 +14,7 @@
 
 #include <gst/gst.h>
 
-#include <ufc/logger.h>
+#include "logger.h"
 
 #include <thread>
 
@@ -23,7 +23,7 @@ class DisplayManager;
 
 class XPPluginDataSource;
 
-class XPLogPrinter : public UFC::LogPrinter
+class XPLogPrinter : public LogPrinter
 {
  public:
     virtual ~XPLogPrinter() = default;
@@ -42,7 +42,7 @@ class XPLogPrinter : public UFC::LogPrinter
 };
 
 
-class XStreamPlugin : private UFC::Logger
+class XStreamPlugin : private Logger
 {
  private:
     XPLogPrinter m_logPrinter;
